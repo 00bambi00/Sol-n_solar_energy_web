@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Solar Energy Predictor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&family=Roboto&display=swap" rel="stylesheet" />
+  <style>
+    /* Base Layout: html, body เต็มจอ + flexbox กึ่งกลาง */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+      background-image: url('{{ background_image_url }}');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      color: #222;
+
+      display: flex;
+      justify-content: center;  /* กึ่งกลางแนวนอน */
+      align-items: center;      /* กึ่งกลางแนวตั้ง */
+      overflow-x: hidden;
+    }
+
+    /* กล่องเนื้อหา ไม่เต็มจอ กว้าง 360px หรือ 90% ของหน้าจอ + มี margin อัตโนมัติ */
+    .content-box {
+      background-color: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 30px 20px;
+      max-width: 360px;
+      width: 90vw;            /* responsive กว้าง 90% ของ viewport width */
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      color: #111;
+
+      box-sizing: border-box;
+      margin: 0 auto;         /* กึ่งกลาง และเว้นขอบซ้ายขวา */
+      text-align: center;
+    }
+
+    /* Branding / Title */
+    .branding-box {
+      padding-top: 40px;
+      color: #ff9800;
+      position: relative;
+      z-index: 10;
+    }
+    .branding-box h1 {
+      font-size: 3rem;
+      margin: 0;
+      font-weight: 700;
+    }
+    .branding-box p {
+      font-size: 1.2rem;
+      margin-top: 8px;
+      color: #333;
+    }
+
+    /* Form */
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    #city-input {
+      padding: 10px 15px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+    #city-input:focus {
+      border-color: #ff9800;
+      box-shadow: 0 0 5px rgba(255, 152, 0, 0.5);
+    }
+    button[type="submit"] {
+      background-color: #ffb300;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+    }
+    button[type="submit"]:hover {
+      background-color: #f57c00;
+    }
+
+    /* Info Panel */
+    .info-frame {
+      background: rgba(255,255,255,0.75);
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.08);
+      line-height: 1.6;
+      font-size: 1rem;
+      color: #111;
+      text-align: left;
+    }
+
+    /* Charts Section */
+    .charts-flex {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 30px;
+      max-width: 360px; /* ให้กว้างเท่ากับ content box */
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .chart-box {
+      flex: 1 1 320px; /* กำหนดความกว้างเริ่มต้น 320px */
+      max-width: 320px; /* จำกัดไม่ให้เกิน 320px */
+      background: rgba(255,255,255,0.7);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      color: #111;
+      box-sizing: border-box;
+      margin: 0 auto; /* ไม่ชิดขอบ container */
+    }
+
+    .chart-box h4 {
+      text-align: center;
+      color: #ff9800;
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+
+    /* Override Chart Canvas Size */
+    #hourlyChart, #energyChart {
+      width: 100% !important;
+      height: 320px !important;
+    }
+
+    /* Typography Reset */
+    h1, h2, h3, h4, h5, h6, label, input, button, span, div, p {
+      color: #111 !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="content-box" role="main" aria-label="Solar energy predictor content">
+
+    <header class="branding-box" role="banner">
+      <h1>Sol-n</h1>
+      <p>Predict your city's solar energy output with ease.</p>
+    </header>
+
+    <form method="post" aria-label="City input form">
+      <input
+        type="text"
+        name="city"
+        id="city-input"
+        placeholder="Enter your city"
+        required
+        aria-required="true"
+      />
+      <button type="submit" aria-label="Submit city for solar energy prediction">Submit</button>
+    </form>
+
+    {% if data %}
+      {% if data.error %}
+        <p role="alert" style="color: #d32f2f; font-weight: 600; margin-top: 20px;">
+          ⚠️ {{ data.error }}
+        </p>
+      {% else %}
+        <section class="info-frame" aria-live="polite" aria-atomic="true">
+          <p><b>City</b>: {{ data.city }}</p>
+          <p><b>Latitude</b>: {{ data.lat }}</p>
+          <p><b>Longitude</b>: {{ data.lon }}</p>
+          <p><b>Solar Irradiance</b>: {{ data.irradiance }} kW-hr/m²/day</p>
+          <p><b>Estimated Energy</b>: {{ data.energy_kwh }}</p>
+        </section>
+
+        <section class="charts-flex" aria-label="Solar energy charts">
+          <div class="chart-box">
+            <h4>Energy Output Chart</h4>
+            <canvas id="energyChart" role="img" aria-label="Energy output line chart"></canvas>
+          </div>
+
+          <div class="chart-box">
+            <h4>Hourly Irradiance</h4>
+            <canvas id="hourlyChart" role="img" aria-label="Hourly solar irradiance bar chart"></canvas>
+          </div>
+        </section>
+      {% endif %}
+    {% endif %}
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const data = {{ data | tojson | safe }};
+
+    if (data && data.hours && data.values) {
+      const ctxEnergy = document.getElementById("energyChart").getContext("2d");
+      new Chart(ctxEnergy, {
+        type: "line",
+        data: {
+          labels: data.hours,
+          datasets: [{
+            label: "Energy Output",
+            data: data.values,
+            borderColor: "#ffb300",
+            backgroundColor: "rgba(255,179,0,0.3)",
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          layout: { padding: { left: 10, right: 10, top: 10, bottom: 10 }},
+          responsive: true,
+          plugins: { legend: { labels: { font: { size: 12 }}}},
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "kWh", font: { size: 14 }},
+              ticks: { font: { size: 12 }}
+            },
+            x: {
+              title: { display: true, text: "Hours", font: { size: 14 }},
+              ticks: { font: { size: 12 }}
+            }
+          }
+        }
+      });
+    }
+
+    if (data && data.hourly) {
+      const ctxHourly = document.getElementById("hourlyChart").getContext("2d");
+      new Chart(ctxHourly, {
+        type: "bar",
+        data: {
+          labels: data.hours,
+          datasets: [{
+            label: "Hourly Irradiance",
+            data: data.hourly,
+            backgroundColor: "#ffb300"
+          }]
+        },
+        options: {
+          layout: { padding: { left: 10, right: 10, top: 10, bottom: 10 }},
+          responsive: true,
+          plugins: { legend: { labels: { font: { size: 12 }}}},
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "W/m²", font: { size: 14 }},
+              ticks: { font: { size: 12 }}
+            },
+            x: {
+              title: { display: true, text: "Hours", font: { size: 14 }},
+              ticks: { font: { size: 12 }}
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+             
+
+
+
+
+
+
+
